@@ -1,8 +1,8 @@
 # Planto-Ride
 
-Shared rides, cars and bikes - with 50% of annual net profit after tax committed to tree planting and care in Pune. Built for Navnath Sonawane, using his supplied Planto-Ride logo.
+Shared rides, cars and bikes — with 50% of annual net profit after tax committed to tree planting and care in Pune. Built for Navnath Sonawane, using his supplied Planto-Ride logo.
 
-[Repository](https://github.com/navnathpy/Planto_Ride) � [Hosting setup](HOSTING.md)
+[Repository](https://github.com/navnathpy/Planto_Ride) · [Hosting setup](HOSTING.md)
 
 ## Current release
 
@@ -14,9 +14,9 @@ The owner will connect backend hosting separately. Until `PLANTO_API_URL` is con
 
 Each booking receives a persistent, private **Captain** chatbot. It is a rules-based automated assistant, not a human driver or safety officer. The API schedules a check-in at trip start and five minutes after each reply during a trip, with at most one unanswered check-in. Signed-in clients poll across tabs while open. Replies are stored, and help/unsafe reports enter the existing manual incident-review queue. There are no push notifications, automatic calls or staffed response promises. Missing replies never establish that a ride is safe.
 
-The new **Impact** tab shows live eligible shared-ride CO2 estimates, accumulated completed-trip estimates since joining, rider/owner tree-fund allocations, overall estimated vehicle-hours avoided, and site-level heat-study results when recorded. Unknown or missing measurements stay unmeasured. See [impact methodology and operator records](api/IMPACT.md) and the website's methodology page.
+The new **Impact** tab shows live eligible shared-ride CO₂ estimates, accumulated completed-trip estimates since joining, rider/owner tree-fund allocations, overall estimated vehicle-hours avoided, and site-level heat-study results when recorded. Unknown or missing measurements stay unmeasured. See [impact methodology and operator records](api/IMPACT.md) and the website's methodology page.
 
-Savings require an already-planned shared journey, an explicit solo-car alternative and credible foreground GPS segments. The 0.249 kg CO2/km US petrol-car proxy is an estimate, not measured Pune emissions. Tree funding comes from evidence-backed allocation records, not an automatic percentage of each fare. No carbon-to-�C conversion is used.
+Savings require an already-planned shared journey, an explicit solo-car alternative and credible foreground GPS segments. The 0.249 kg CO₂/km US petrol-car proxy is an estimate, not measured Pune emissions. Tree funding comes from evidence-backed allocation records, not an automatic percentage of each fare. No carbon-to-°C conversion is used.
 
 ## Included
 
@@ -56,4 +56,4 @@ This release supports scheduled offers matched by exact pickup/destination areas
 
 Never put merchant passwords, Cashfree secrets, databases, identity documents or signing keys in GitHub. This version is saved in the requested **navnathpy/Planto_Ride** repository. The earlier `Plato-ride` repository and deployment are separate.
 
-The vision website incorporates the supplied investor deck's Pune office-commute focus, proposed corridors, Green Fund care cycle and employer roadmap. Deck projections, example impact figures and unverified regulatory claims are not presented as operating results. The private source deck is not included in the public repository.
+The vision website incorporates the supplied investor deck’s Pune office-commute focus, proposed corridors, Green Fund care cycle and employer roadmap. Deck projections, example impact figures and unverified regulatory claims are not presented as operating results. The private source deck is not included in the public repository.

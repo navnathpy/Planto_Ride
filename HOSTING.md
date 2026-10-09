@@ -1,6 +1,6 @@
 # Connect Planto-Ride hosting
 
-The owner chose to connect backend hosting separately. The new repository is `navnathpy/Planto_Ride`. To host its static site, select **GitHub Actions** in Settings → Pages, set Actions variable `ENABLE_PAGES=true`, and run the workflow. The intended URL is https://navnathpy.github.io/Planto_Ride/. GitHub Pages cannot run the API or database. The earlier `Plato-ride` deployment is independent and is not updated by commits to this repository.
+The owner chose to connect backend hosting separately. The new repository is `navnathpy/Planto_Ride`. GitHub Pages is enabled. The workflow now deploys the static site automatically after all tests pass. In Settings → Pages, use **GitHub Actions** as the publishing source. The website URL is https://navnathpy.github.io/Planto_Ride/. GitHub Pages cannot run the API or database. The older `Plato-ride` URLs are legacy entry points; use the `Planto_Ride` URLs for this release.
 
 ## 1. Deploy the API
 

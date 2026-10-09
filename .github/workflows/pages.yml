@@ -57,7 +57,6 @@ jobs:
         run: npm run export
 
   deploy:
-    if: vars.ENABLE_PAGES == 'true'
     needs: [website-and-api, mobile]
     runs-on: ubuntu-latest
     permissions:

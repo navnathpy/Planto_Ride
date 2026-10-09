@@ -54,6 +54,6 @@ Read **[HOSTING.md](HOSTING.md)** for the persistent backend, HTTPS, Cashfree, w
 
 This release supports scheduled offers matched by exact pickup/destination areas. It does not implement automatic nearby-driver dispatch, Google route-based metered pricing, SMS OTP, masked calls, background GPS, push notifications, automatic emergency response or an operating driver fleet. Google Maps city/route previews are separate from optional live coordinates.
 
-Never put merchant passwords, Cashfree secrets, databases, identity documents or signing keys in GitHub. This version is saved in the requested **navnathpy/Planto_Ride** repository. The earlier `Plato-ride` repository and deployment are separate.
+Never put merchant passwords, Cashfree secrets, databases, identity documents or signing keys in GitHub. This version is saved in the requested **navnathpy/Planto_Ride** repository. Open the [website](https://navnathpy.github.io/Planto_Ride/), [booking app](https://navnathpy.github.io/Planto_Ride/app.html), or [Impact dashboard](https://navnathpy.github.io/Planto_Ride/app.html?view=impact). The public interface deploys through GitHub Pages; live accounts and data require the separately hosted API.
 
 The vision website incorporates the supplied investor deck’s Pune office-commute focus, proposed corridors, Green Fund care cycle and employer roadmap. Deck projections, example impact figures and unverified regulatory claims are not presented as operating results. The private source deck is not included in the public repository.

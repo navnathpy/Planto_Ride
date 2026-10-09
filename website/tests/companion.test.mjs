@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {metric,measuredMetric,impactMarkup} from '../dist/companion.mjs';
+test('unavailable backend keeps all impact categories visible without inventing data',()=>{const html=impactMarkup(null,null,{unavailable:true});for(const label of ['LIVE CARBON','LIFETIME CARBON','AS A RIDER','AS AN OWNER','VEHICLE-HOURS AVOIDED','LOCAL HEAT REDUCTION'])assert.ok(html.includes(label));assert.match(html,/Live data is unavailable/);assert.doesNotMatch(html,/0 INR|0 °C|Updated /);});
 test('missing measurements are distinct from measured zero',()=>{assert.equal(metric(null,'°C'),'Not measured');assert.equal(metric(0,'°C'),'0 °C');assert.equal(metric(NaN),'Not measured');assert.equal(measuredMetric({co2_kg:0,eligible_bookings:0},'co2_kg','kg'),'Not measured');});
 test('impact report escapes evidence and explains estimates without fake heat',()=>{const html=impactMarkup({completed:{eligible_bookings:0},trees:{allocated_inr:0,trees_recorded:0},heat:{reduction_c:null}},null);assert.match(html,/Not measured/);assert.match(html,/not measured passenger time saved/);assert.match(html,/Sign in/);assert.doesNotMatch(html,/0 °C/);const study=impactMarkup({completed:{eligible_bookings:1,co2_kg:2,vehicle_hours:.1},trees:{allocated_inr:10,trees_recorded:1},heat:{reduction_c:.4,scope:'<script>bad</script>',reference:'"unsafe"'}},null);assert.doesNotMatch(study,/<script>/);assert.match(study,/&lt;script&gt;/);});
 

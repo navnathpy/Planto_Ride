@@ -1,3 +1,4 @@
+import {mountOperator} from './operator.mjs';
 import {createCompanion} from './companion.mjs';
 import {createApi,SERVICES,totalFare,cashfreeCheckout} from './client.mjs';
 import {updateMap} from './maps.mjs';
@@ -58,3 +59,5 @@ const today=new Date();$('#travel-date').value=new Date(today.getTime()-today.ge
 $('#connection').textContent='Connecting to booking service… Free test hosting may take about a minute to wake.';
 void api.request('/health').then(h=>{$('#connection').textContent=(h.test_hosting?'Test pilot · Accounts and vehicles need operator approval · ':'')+'Booking service connected · '+(h.payments_configured?(h.payment_mode==='production'?'Cashfree live payments':'Cashfree test mode'):'Online payments not configured');}).catch(()=>{$('#connection').textContent='Bookings unavailable · service may be waking. Please reload in a minute.';$('#connection').classList.add('offline');});
 setInterval(()=>{if(user&&view==='trips'&&!document.hidden&&!$('#sheet').open&&!$('#sos-dialog').open)void refreshTrips().catch(()=>{});},15000);
+
+const operatorRoot=document.createElement('div');document.querySelector('#account-details').before(operatorRoot);mountOperator(operatorRoot);

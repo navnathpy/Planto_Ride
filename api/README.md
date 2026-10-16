@@ -6,7 +6,7 @@ For the free Render service, run the commands below locally using `python remote
 
 ## Operator workflow
 
-Riders and drivers register with name, Indian mobile number and a password of at least 12 characters. Phone identity is **not SMS-verified**; the operator must verify phone ownership and identity before approval. Passwords are PBKDF2-SHA256 hashes with unique salts and 600,000 iterations. Sessions expire after 12 hours and are revocable. The current release has no self-service password recovery or operational admin web console.
+Riders and drivers register with name, Indian mobile number and a password of at least 12 characters. Phone identity is **not SMS-verified**; the operator must verify phone ownership and identity before approval. Passwords are PBKDF2-SHA256 hashes with unique salts and 600,000 iterations. Rider/driver sessions expire after 12 hours and are revocable. Account → Operator dashboard provides separate owner login and operator controls. Operator sessions expire after one hour. There is no self-service password recovery.
 
 Run the CLI on the secured API host against its production database only after your verification process succeeds:
 

@@ -1,7 +1,7 @@
 """Planto-Ride API: real accounts and inventory; never seeds passengers or rides."""
 from __future__ import annotations
 import argparse, base64, hashlib, hmac, json, os, re, secrets, sqlite3, sys, time, uuid
-import captain, impact, storage
+import captain, impact, storage, admin
 from contextlib import contextmanager
 from datetime import datetime, timezone, timedelta
 from decimal import Decimal, InvalidOperation
@@ -53,6 +53,7 @@ def init():
         c.execute("INSERT INTO payment_orders SELECT order_id,id,total,'INR','UNKNOWN',NULL,created,created FROM bookings WHERE order_id IS NOT NULL ON CONFLICT DO NOTHING")
         captain.init(c)
         impact.init(c)
+        admin.init(c)
 
 def fail(ok,message,status=400):
     if not ok:raise HTTPException(status,message)
@@ -557,6 +558,7 @@ def operator():
         c.execute('INSERT INTO audit(action,target,reference,created) VALUES(?,?,?,?)',(a.command,u['id'],a.reference,time.time()))
         print('Account updated. Verification evidence must be retained in your secured operations system.')
 captain.register(app,sys.modules[__name__])
+admin.register(app,sys.modules[__name__])
 impact.register(app,sys.modules[__name__])
 if os.getenv('SERVE_WEBSITE','false').lower()=='true':
     @app.get('/config.js', include_in_schema=False)

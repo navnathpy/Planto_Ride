@@ -57,6 +57,12 @@ The backend stores a durable order history for each booking. It reuses active ch
 
 ## 4. Approve real accounts and vehicles
 
+Open the booking app → Account → Operator dashboard. Sign in with the operator email/password configured privately on Render (`OPERATOR_EMAIL`, `OPERATOR_PASSWORD_HASH`). No credentials are shipped in the website or mobile bundles. Operator sessions expire after one hour, are stored only in client memory, and are revoked server-side on sign-out. Changing the configured password hash invalidates previous sessions. Ten login attempts are allowed per 15-minute window. There is currently one owner operator and no self-service password reset or MFA.
+
+Accounts lets the operator approve/suspend users, correct Rider/Driver account types, and verify Ladies eligibility. All changes require an evidence reference and sign the affected user out. Vehicles supports approval/update and revocation. Ride offers can be closed to new bookings without cancelling existing passengers. Bookings/payment status is read-only: the operator cannot bypass trip PINs or mark payments paid. Safety reports support review notes and status, without automated emergency notifications. Tree allocations and heat studies use the existing evidence validation; audit history records changes. Records are paginated and searchable. The native Account screen opens this same secure web dashboard.
+
+Do not treat an approval checkbox as document verification: retain supporting records securely. This dashboard does not upload documents, run licence checks, send SMS, process refunds, or provide a staffed emergency service.
+
 Follow `api/README.md`. Verify identity, phone ownership, driver licence, vehicle registration, insurance and service eligibility through your secured operations process; verify Ladies eligibility where requested. Keep supporting records outside the repository. Approval is a deliberate operator action, not a checkbox a user can grant themselves.
 
 ## Google Maps

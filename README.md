@@ -8,7 +8,7 @@ Shared rides, cars and bikes — with 50% of annual net profit after tax committ
 
 The website and native Android/iPhone screens now use the same HTTP API. There are **no seeded rides, fictional drivers, local booking fallbacks or passenger-operated trip simulations**. The database starts empty.
 
-The owner will connect backend hosting separately. Until `PLANTO_API_URL` is configured, the public website shows booking-service unavailable and accepts no bookings or payments. Cashfree integration is implemented, but no merchant keys are included and no live transaction has been run. The native source builds successfully; signed APK/IPA and store releases are separate steps.
+The free test pilot is hosted at [planto-ride-test.onrender.com](https://planto-ride-test.onrender.com), with the [booking app](https://planto-ride-test.onrender.com/app.html) connected to persistent Supabase PostgreSQL. GitHub Pages uses the same API by default; Actions variable `PLANTO_API_URL` can override it. Free hosting may sleep. Register consenting test participants and use the restricted operator workflow to approve accounts and vehicles before posting offers. Cashfree remains sandbox-only with no merchant keys configured. The native source builds successfully; signed APK/IPA and store releases are separate steps.
 
 ## Captain and impact release
 

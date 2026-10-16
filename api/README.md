@@ -1,6 +1,8 @@
 # Planto-Ride API
 
-FastAPI, SQLite transactions and an empty initial database. Start with `pip install -r requirements.txt`, then `uvicorn app:app --host 127.0.0.1 --port 8788 --no-access-log`. Deployment settings are in `../HOSTING.md`. The previous demo server and its seed paths were removed; the new database is `data/planto.sqlite3`.
+FastAPI with PostgreSQL for hosted pilots, SQLite for local use, and an empty initial database. Start with `pip install -r requirements.txt`, then `uvicorn app:app --host 127.0.0.1 --port 8788 --no-access-log`. Set `DATABASE_URL` privately for PostgreSQL; otherwise local storage is `data/planto.sqlite3`. Deployment settings are in `../HOSTING.md`. No demo inventory is seeded.
+
+For the free Render service, run the commands below locally using `python remote_operator.py` instead of `python app.py`. The wrapper requests the private database URL using hidden input. Use the same arguments, and never commit the connection URL.
 
 ## Operator workflow
 

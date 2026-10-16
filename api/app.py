@@ -71,7 +71,7 @@ def throttle(key,limit,window=60):
         c.execute('INSERT INTO limits VALUES(?,?)',(key,now))
 
 app=FastAPI(title='Planto-Ride',version='1.1.0')
-app.add_middleware(CORSMiddleware,allow_origins=os.getenv('ALLOWED_ORIGINS',WEB).split(','),allow_methods=['GET','POST','PATCH','DELETE'],allow_headers=['Authorization','Content-Type'],allow_credentials=False)
+app.add_middleware(CORSMiddleware,allow_origins=list(dict.fromkeys([WEB,*os.getenv('ALLOWED_ORIGINS','https://navnathpy.github.io').split(',')])),allow_methods=['GET','POST','PATCH','DELETE'],allow_headers=['Authorization','Content-Type'],allow_credentials=False)
 
 @app.on_event('startup')
 def startup():

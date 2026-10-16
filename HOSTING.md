@@ -1,5 +1,19 @@
 # Connect Planto-Ride hosting
 
+## Free test pilot: Render + Supabase
+
+The test deployment uses one free Render Python web service and the free Supabase project `planto-ride-test` in Mumbai. PostgreSQL data lives outside Render's temporary filesystem. The website and API share the Render HTTPS address; `/app.html` opens booking and `/health` checks the database connection. No demo accounts or rides are seeded.
+
+Build from the repository root with `pip install -r api/requirements.txt`. Start with `uvicorn app:app --app-dir api --host 0.0.0.0 --port $PORT --workers 1 --no-access-log --no-proxy-headers`. Set `ENVIRONMENT=production`, `TEST_HOSTING=true`, `SERVE_WEBSITE=true`, `CASHFREE_MODE=sandbox`, and the private `DATABASE_URL`. Render supplies `RENDER_EXTERNAL_URL`; the application uses it for website/API URLs and serves a public `/config.js`. Do not set placeholder WEB_URL or PUBLIC_API_URL values on Render.
+
+The database login owns only the private `planto` schema, has no superuser/database-creation privileges, and is not accessible through anonymous Supabase clients. Its password belongs only in Render's environment settings. Use the session pooler with TLS (`sslmode=require`). Keep one API worker: writes use a transaction advisory lock to preserve seat and payment consistency in this small pilot. CI runs the same booking/payment/safety tests on SQLite and PostgreSQL 17.
+
+Free services can sleep or pause. Captain check-ins require an awake server and an open signed-in app; this is not an emergency monitoring service. There is no uptime guarantee, production dispatch, background push, or staffed response. Cashfree remains sandbox-only; payments remain unavailable until sandbox API keys are supplied. Establish backups and operating procedures before accepting real passenger journeys.
+
+For a controlled test, register consenting rider and driver accounts, then approve them and the driver's vehicle using the existing operator commands in `api/README.md`. Run `python remote_operator.py --help` from `api` with dependencies installed; it asks for the database URL with hidden input rather than saving it in shell history. Obtain the connection value from the restricted Render environment settings. Never paste it into chat or GitHub. Driver-posted rides must match the searched pickup/drop-off areas. Empty search results mean no eligible driver has posted a ride.
+
+The sections below also describe the separately supported persistent-disk SQLite deployment. Do not use SQLite on Render's free ephemeral filesystem.
+
 The owner chose to connect backend hosting separately. The new repository is `navnathpy/Planto_Ride`. GitHub Pages is enabled. The workflow now deploys the static site automatically after all tests pass. In Settings → Pages, use **GitHub Actions** as the publishing source. The website URL is https://navnathpy.github.io/Planto_Ride/. GitHub Pages cannot run the API or database. The older `Plato-ride` URLs are legacy entry points; use the `Planto_Ride` URLs for this release.
 
 ## 1. Deploy the API

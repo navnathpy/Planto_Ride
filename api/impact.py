@@ -5,6 +5,7 @@ passenger input and tree counts are never converted into measured cooling.
 """
 from __future__ import annotations
 import argparse, json, math, sqlite3, time
+import storage
 from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
 from urllib.parse import urlparse
@@ -43,8 +44,8 @@ def init(c):
     for statement in SCHEMA.split(';'):
         if statement.strip(): c.execute(statement)
     # Existing rides migrate as unmeasured/ineligible, never reconstructed.
-    c.execute('INSERT OR IGNORE INTO impact_rides(ride_id) SELECT id FROM rides')
-    c.execute('INSERT OR IGNORE INTO impact_bookings(booking_id) SELECT id FROM bookings')
+    c.execute('INSERT INTO impact_rides(ride_id) SELECT id FROM rides WHERE 1=1 ON CONFLICT DO NOTHING')
+    c.execute('INSERT INTO impact_bookings(booking_id) SELECT id FROM bookings WHERE 1=1 ON CONFLICT DO NOTHING')
 
 def record_offer(c, ride_id, already_planned=False):
     c.execute('INSERT INTO impact_rides VALUES(?,?)', (ride_id, int(bool(already_planned))))
@@ -82,7 +83,7 @@ def record_location(c, ride_id, lat, lng, accuracy=None):
     previous = c.execute('SELECT * FROM impact_anchors WHERE ride_id=?', (ride_id,)).fetchone()
     # Duplicate/backward timestamps cannot move the anchor or manufacture time.
     if previous and now<=previous['observed']: return
-    c.execute('INSERT OR REPLACE INTO impact_anchors VALUES(?,?,?,?,?)', (ride_id,lat,lng,accuracy,now))
+    c.execute('INSERT INTO impact_anchors VALUES(?,?,?,?,?) ON CONFLICT(ride_id) DO UPDATE SET lat=excluded.lat,lng=excluded.lng,accuracy=excluded.accuracy,observed=excluded.observed', (ride_id,lat,lng,accuracy,now))
     if not previous: return
     duration = now-previous['observed']
     if duration<=0 or duration>MAX_GAP_SECONDS: return
@@ -210,6 +211,6 @@ def main():
             (record_allocation if command=='record-tree-allocation' else record_heat_study)(c,**arguments)
         print(json.dumps({'recorded':True,'command':command}))
     except HTTPException as error: parser.exit(1,error.detail+'\n')
-    except sqlite3.IntegrityError: parser.exit(1,'Record conflicts with existing ledger evidence. No change saved.\n')
+    except storage.INTEGRITY_ERRORS: parser.exit(1,'Record conflicts with existing ledger evidence. No change saved.\n')
 
 if __name__=='__main__': main()

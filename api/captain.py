@@ -10,6 +10,7 @@ import hashlib
 import json
 import logging
 import time
+import storage
 from typing import Literal
 from uuid import UUID, uuid4
 from fastapi import Depends
@@ -47,7 +48,7 @@ class Message(BaseModel):
 
 def init(c):
     """Install additive schema from the core database initialization."""
-    c.executescript(SCHEMA)
+    storage.install(c, SCHEMA)
 
 def _message(c, booking_id, role, text, now, checkin_id=None):
     c.execute('INSERT INTO captain_messages(id,booking_id,role,text,created,checkin_id) VALUES(?,?,?,?,?,?)',
@@ -70,7 +71,7 @@ def _check(c, booking_id, due_at, now):
     if c.execute("SELECT 1 FROM captain_checkins WHERE booking_id=? AND status='awaiting'", (booking_id,)).fetchone():
         return
     identifier = 'check_' + uuid4().hex
-    inserted = c.execute('INSERT OR IGNORE INTO captain_checkins(id,booking_id,due_at) VALUES(?,?,?)',
+    inserted = c.execute('INSERT INTO captain_checkins(id,booking_id,due_at) VALUES(?,?,?) ON CONFLICT DO NOTHING',
                          (identifier, booking_id, due_at)).rowcount
     if inserted:
         _message(c, booking_id, 'captain',

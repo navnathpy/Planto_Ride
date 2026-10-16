@@ -4,7 +4,7 @@ export function createApi(base,fetcher=fetch){
  let token='';base=base.replace(/\/$/,'');
  return {setToken(value){token=value;},async request(path,method='GET',body){
   if(!base)throw Error('Booking service is not connected yet. No booking or payment has been made.');
-  const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),25000);
+  const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),path==='/health'?90000:25000);
   try{const response=await fetcher(base+path,{method,headers:{Accept:'application/json',...(body!==undefined?{'Content-Type':'application/json'}:{}),...(token?{Authorization:'Bearer '+token}:{})},body:body===undefined?undefined:JSON.stringify(body),signal:controller.signal});const data=await response.json();if(!response.ok)throw Error(typeof data.detail==='string'?data.detail:'Please check your details and try again.');return data;}catch(e){if(e.name==='AbortError')throw Error('The service took too long to respond. Refresh your trips before retrying a booking.');throw e;}finally{clearTimeout(timer);}
  }};
 }

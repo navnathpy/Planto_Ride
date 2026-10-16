@@ -1,7 +1,7 @@
 """Planto-Ride API: real accounts and inventory; never seeds passengers or rides."""
 from __future__ import annotations
 import argparse, base64, hashlib, hmac, json, os, re, secrets, sqlite3, sys, time, uuid
-import captain, impact
+import captain, impact, storage
 from contextlib import contextmanager
 from datetime import datetime, timezone, timedelta
 from decimal import Decimal, InvalidOperation
@@ -10,13 +10,17 @@ from typing import Literal
 import httpx
 from fastapi import FastAPI, Depends, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, HTMLResponse
+from fastapi.responses import JSONResponse, HTMLResponse, Response
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field
 
 DB = os.getenv('DATABASE_PATH', str(Path(__file__).parent/'data'/'planto.sqlite3'))
-WEB = os.getenv('WEB_URL', 'http://127.0.0.1:4173').rstrip('/')
-PUBLIC = os.getenv('PUBLIC_API_URL', 'http://127.0.0.1:8788').rstrip('/')
+DATABASE_URL = os.getenv('DATABASE_URL', '')
+DATABASE_SCHEMA = 'planto'
+WEB = os.getenv('WEB_URL', os.getenv('RENDER_EXTERNAL_URL', 'http://127.0.0.1:4173')).rstrip('/')
+PUBLIC = os.getenv('PUBLIC_API_URL', os.getenv('RENDER_EXTERNAL_URL', 'http://127.0.0.1:8788')).rstrip('/')
 MODE = os.getenv('CASHFREE_MODE', 'sandbox')
+TEST_HOSTING = os.getenv('TEST_HOSTING', 'false').lower() == 'true'
 SERVICES = {'shared':6, 'cab':4, 'bike':1}
 SCHEMA = '''
 CREATE TABLE IF NOT EXISTS users(id TEXT PRIMARY KEY,name TEXT NOT NULL,phone TEXT UNIQUE NOT NULL,password TEXT NOT NULL,role TEXT NOT NULL,gender TEXT NOT NULL,approved INTEGER NOT NULL DEFAULT 0,woman_verified INTEGER NOT NULL DEFAULT 0,contact TEXT NOT NULL DEFAULT '',created REAL NOT NULL);
@@ -39,23 +43,14 @@ CREATE INDEX IF NOT EXISTS ride_search ON rides(service,ladies,status,departure)
 
 @contextmanager
 def db(write=False):
-    Path(DB).parent.mkdir(parents=True, exist_ok=True)
-    c=sqlite3.connect(DB,timeout=15,isolation_level=None); c.row_factory=sqlite3.Row
-    c.execute('PRAGMA foreign_keys=ON')
-    try:
-        if write:c.execute('BEGIN IMMEDIATE')
+    with storage.connect(DB,DATABASE_URL,write,DATABASE_SCHEMA) as c:
         yield c
-        if write:c.commit()
-    except Exception:
-        if write:c.rollback()
-        raise
-    finally:c.close()
 
 def init():
-    with db() as c:
-        c.execute('PRAGMA journal_mode=WAL'); c.executescript(SCHEMA)
+    with storage.connect(DB,DATABASE_URL,True,DATABASE_SCHEMA,initialize=True) as c:
+        storage.install(c,SCHEMA)
         # Preserve order IDs issued before the order-history table was introduced.
-        c.execute("INSERT OR IGNORE INTO payment_orders SELECT order_id,id,total,'INR','UNKNOWN',NULL,created,created FROM bookings WHERE order_id IS NOT NULL")
+        c.execute("INSERT INTO payment_orders SELECT order_id,id,total,'INR','UNKNOWN',NULL,created,created FROM bookings WHERE order_id IS NOT NULL ON CONFLICT DO NOTHING")
         captain.init(c)
         impact.init(c)
 
@@ -81,12 +76,23 @@ app.add_middleware(CORSMiddleware,allow_origins=os.getenv('ALLOWED_ORIGINS',WEB)
 @app.on_event('startup')
 def startup():
     fail(MODE in ('sandbox','production'),'CASHFREE_MODE must be sandbox or production')
+    fail(not TEST_HOSTING or MODE=='sandbox','Test hosting requires Cashfree sandbox mode')
+    fail(not os.getenv('RENDER') or DATABASE_URL,'Render hosting requires persistent PostgreSQL storage')
     if os.getenv('ENVIRONMENT')=='production':
         fail(WEB.startswith('https://') and PUBLIC.startswith('https://'),'Production requires HTTPS public URLs')
     init()
 
 @app.middleware('http')
 async def guard(request:Request,call_next):
+    # Static pages and readiness probes must not consume booking rate limits
+    # or open a database connection for each image, stylesheet and health poll.
+    if not request.url.path.startswith('/v1/'):
+        response=await call_next(request)
+        response.headers['X-Content-Type-Options']='nosniff'
+        response.headers['Referrer-Policy']='no-referrer'
+        if request.url.path in ('/health','/config.js'):
+            response.headers['Cache-Control']='no-store'
+        return response
     # The deployment proxy must also cap request bodies and rate-limit at the edge.
     raw=await request.body()
     if len(raw)>16384:return JSONResponse({'detail':'Request too large'},413)
@@ -144,7 +150,9 @@ def session(c,u):
     return {'token':token,'user':user_json(u)}
 
 @app.get('/health')
-def health():return {'status':'ok','brand':'Planto-Ride','payments_configured':bool(os.getenv('CASHFREE_CLIENT_ID') and os.getenv('CASHFREE_CLIENT_SECRET')),'payment_mode':MODE,'support_monitored':False}
+def health():
+    with db() as c:c.execute('SELECT 1 FROM users LIMIT 1')
+    return {'status':'ok','brand':'Planto-Ride','payments_configured':bool(os.getenv('CASHFREE_CLIENT_ID') and os.getenv('CASHFREE_CLIENT_SECRET')),'payment_mode':MODE,'support_monitored':False,'test_hosting':TEST_HOSTING}
 @app.post('/v1/auth/register',status_code=201)
 def register(data:Register,request:Request):
     throttle('register:'+request.client.host,10,3600)
@@ -349,7 +357,7 @@ def amount_matches(value,expected):
 
 def preserve_current_order(c,b):
     if b['order_id']:
-        c.execute("INSERT OR IGNORE INTO payment_orders VALUES(?,?,?,'INR','UNKNOWN',NULL,?,?)",(b['order_id'],b['id'],b['total'],b['created'],time.time()))
+        c.execute("INSERT INTO payment_orders VALUES(?,?,?,'INR','UNKNOWN',NULL,?,?) ON CONFLICT DO NOTHING",(b['order_id'],b['id'],b['total'],b['created'],time.time()))
 
 @contextmanager
 def payment_guard(id,u):
@@ -360,7 +368,7 @@ def payment_guard(id,u):
         b,r=owned_booking(c,id,u);preserve_current_order(c,b)
         lock=c.execute('SELECT * FROM payment_locks WHERE booking_id=?',(id,)).fetchone()
         fail(lock is None or lock['expires']<=now,'Payment is already being checked. Please retry shortly.',409)
-        c.execute('INSERT OR REPLACE INTO payment_locks VALUES(?,?,?)',(id,token,now+120))
+        c.execute('INSERT INTO payment_locks VALUES(?,?,?) ON CONFLICT(booking_id) DO UPDATE SET token=excluded.token,expires=excluded.expires',(id,token,now+120))
     try:yield token
     finally:
         with db(True) as c:c.execute('DELETE FROM payment_locks WHERE booking_id=? AND token=?',(id,token))
@@ -540,7 +548,7 @@ def operator():
         if a.command=='approve-vehicle':
             fail(u['role']=='driver' and u['approved'],'Approve the driver first.')
             fail(set(a.services.split(','))<=set(SERVICES),'Unknown service type.')
-            c.execute('INSERT OR REPLACE INTO vehicles VALUES(?,?,?,?)',(u['id'],a.plate,a.vehicle,a.services))
+            c.execute('INSERT INTO vehicles VALUES(?,?,?,?) ON CONFLICT(driver_id,plate) DO UPDATE SET vehicle=excluded.vehicle,services=excluded.services',(u['id'],a.plate,a.vehicle,a.services))
             c.execute('INSERT INTO audit(action,target,reference,created) VALUES(?,?,?,?)',(a.command,u['id']+':'+a.plate,a.reference,time.time()))
             print('Vehicle approved for selected services.');return
         woman=bool(getattr(a,'woman_verified',False));fail(not woman or u['gender']=='woman','Account gender must be woman before verification.')
@@ -550,4 +558,9 @@ def operator():
         print('Account updated. Verification evidence must be retained in your secured operations system.')
 captain.register(app,sys.modules[__name__])
 impact.register(app,sys.modules[__name__])
+if os.getenv('SERVE_WEBSITE','false').lower()=='true':
+    @app.get('/config.js', include_in_schema=False)
+    def browser_config():
+        return Response('window.PLANTO_CONFIG='+json.dumps({'apiUrl':PUBLIC,'testHosting':TEST_HOSTING})+';',media_type='application/javascript')
+    app.mount('/',StaticFiles(directory=Path(__file__).resolve().parent.parent/'website'/'dist',html=True),name='website')
 if __name__=='__main__':operator()

@@ -2,7 +2,7 @@ FROM python:3.12-slim
 WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt && useradd -m app && mkdir /data && chown app:app /data
-COPY app.py captain.py impact.py storage.py admin.py ./
+COPY app.py captain.py impact.py storage.py admin.py onboarding.py ./
 USER app
 ENV DATABASE_PATH=/data/planto.sqlite3
 EXPOSE 8788

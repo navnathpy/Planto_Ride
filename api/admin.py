@@ -8,6 +8,7 @@ from fastapi import Depends, Header, Request
 from pydantic import BaseModel, ConfigDict, Field
 import impact
 import storage
+import onboarding
 
 SCHEMA = '''
 CREATE TABLE IF NOT EXISTS operator_sessions(hash TEXT PRIMARY KEY,credential_version TEXT NOT NULL,expires REAL NOT NULL);
@@ -71,6 +72,8 @@ def register(app,s):
     def audit(c,action,target,reference):
         c.execute('INSERT INTO audit(action,target,reference,created) VALUES(?,?,?,?)',('operator:'+action,target,reference,time.time()))
 
+    onboarding.register(app,s,current)
+
     @app.post('/v1/operator/login')
     def login(data:Login,request:Request):
         s.throttle('operator-login',10,900)
@@ -91,9 +94,10 @@ def register(app,s):
         return {'signed_out':True}
 
     @app.get('/v1/operator/records/{kind}')
-    def records(kind:Literal['users','vehicles','rides','bookings','incidents','audit','allocations','heat'],q:str='',offset:int=0,authorized=Depends(current)):
+    def records(kind:Literal['applications','users','vehicles','rides','bookings','incidents','audit','allocations','heat'],q:str='',offset:int=0,authorized=Depends(current)):
         s.fail(0<=offset<=1000000 and len(q)<=100,'Invalid search or page.')
         queries={
+            'applications':"SELECT a.id,u.name,u.phone,a.driver_id,a.plate,a.vehicle,a.services,a.status,a.government_status,a.review_note,a.created FROM vehicle_applications a JOIN users u ON u.id=a.driver_id WHERE a.plate LIKE ? OR u.phone LIKE ? ORDER BY CASE WHEN a.status='pending' THEN 0 ELSE 1 END,a.created DESC,a.id",
             'users':"SELECT id,name,phone,role,gender,approved,woman_verified,created FROM users WHERE name LIKE ? OR phone LIKE ? ORDER BY created DESC,id",
             'vehicles':"SELECT v.*,u.name,u.phone FROM vehicles v JOIN users u ON u.id=v.driver_id WHERE v.plate LIKE ? OR u.phone LIKE ? ORDER BY v.driver_id,v.plate",
             'rides':"SELECT id,driver_id,origin,destination,departure,service,plate,status,capacity,available FROM rides WHERE id LIKE ? OR plate LIKE ? ORDER BY created DESC,id",

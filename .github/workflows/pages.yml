@@ -38,6 +38,8 @@ jobs:
       - name: Check browser booking and map logic
         run: |
           node --check website/dist/app.mjs
+          node --check website/dist/operator.mjs
+          node --check website/dist/vehicle-registration.mjs
           node --check website/dist/maps.mjs
           node --check website/dist/client.mjs
           node --check website/dist/track.mjs

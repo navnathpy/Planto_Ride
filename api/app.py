@@ -1,7 +1,7 @@
 """Planto-Ride API: real accounts and inventory; never seeds passengers or rides."""
 from __future__ import annotations
 import argparse, base64, hashlib, hmac, json, os, re, secrets, sqlite3, sys, time, uuid
-import captain, impact, storage, admin
+import captain, impact, storage, admin, onboarding
 from contextlib import contextmanager
 from datetime import datetime, timezone, timedelta
 from decimal import Decimal, InvalidOperation
@@ -54,6 +54,7 @@ def init():
         captain.init(c)
         impact.init(c)
         admin.init(c)
+        onboarding.init(c)
 
 def fail(ok,message,status=400):
     if not ok:raise HTTPException(status,message)
@@ -95,8 +96,13 @@ async def guard(request:Request,call_next):
             response.headers['Cache-Control']='no-store'
         return response
     # The deployment proxy must also cap request bodies and rate-limit at the edge.
-    raw=await request.body()
-    if len(raw)>16384:return JSONResponse({'detail':'Request too large'},413)
+    limit=6*1024*1024 if request.url.path=='/v1/vehicle-applications' and request.method=='POST' else 16384
+    chunks=[];size=0
+    async for chunk in request.stream():
+        size+=len(chunk)
+        if size>limit:return JSONResponse({'detail':'Request too large'},413)
+        chunks.append(chunk)
+    request._body=b''.join(chunks)
     try:
         throttle('ip:'+(request.client.host if request.client else 'unknown'),240)
         response=await call_next(request)

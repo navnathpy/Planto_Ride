@@ -15,7 +15,7 @@ import storage
 
 MAX_IMAGE=2*1024*1024
 RETENTION=30*86400
-CONSENT='vehicle-documents-v1'
+CONSENT='vehicle-documents-v2-rc'
 SCHEMA='''
 CREATE TABLE IF NOT EXISTS vehicle_applications(id TEXT PRIMARY KEY,driver_id TEXT NOT NULL REFERENCES users(id),plate TEXT NOT NULL,vehicle TEXT NOT NULL,services TEXT NOT NULL,status TEXT NOT NULL,review_note TEXT NOT NULL DEFAULT '',reference TEXT NOT NULL DEFAULT '',government_status TEXT NOT NULL DEFAULT 'not_connected',consent_version TEXT NOT NULL,created REAL NOT NULL,updated REAL NOT NULL);
 CREATE UNIQUE INDEX IF NOT EXISTS vehicle_application_pending ON vehicle_applications(driver_id,plate) WHERE status='pending';
@@ -57,9 +57,8 @@ class Submission(Input):
     vehicle:str=Field(min_length=2,max_length=80)
     services:list[Literal['shared','cab','bike']]=Field(min_length=1,max_length=3)
     licence_photo:str=Field(min_length=16,max_length=2800000)
-    aadhaar_photo:str=Field(min_length=16,max_length=2800000)
+    rc_photo:str=Field(min_length=16,max_length=2800000)
     consent:bool
-    masked_aadhaar:bool
     @field_validator('plate')
     @classmethod
     def normalize(cls,value):
@@ -86,11 +85,11 @@ def register(app,s,operator):
     @app.post('/v1/vehicle-applications',status_code=201)
     def submit(data:Submission,u=Depends(s.current)):
         s.fail(u['role']=='driver','Register or change your account to Driver before submitting a vehicle.',403)
-        s.fail(data.consent and data.masked_aadhaar,'Consent and confirmation of masked Aadhaar are required.')
+        s.fail(data.consent,'Consent to document review is required.')
         s.fail(not ('bike' in data.services and len(data.services)>1),'Submit a bike separately from a car.')
         key=cipher()
         s.throttle('vehicle-submission:'+u['id'],5,3600)
-        pictures={'licence':image_bytes(data.licence_photo),'aadhaar':image_bytes(data.aadhaar_photo)}
+        pictures={'licence':image_bytes(data.licence_photo),'rc':image_bytes(data.rc_photo)}
         with s.db(True) as c:
             purge(c)
             s.fail(not c.execute("SELECT 1 FROM vehicle_applications WHERE driver_id=? AND plate=? AND status='pending'",(u['id'],data.plate)).fetchone(),'This vehicle is already awaiting review. Refresh your submissions.',409)
@@ -118,7 +117,7 @@ def register(app,s,operator):
     def documents(id:str,authorized=Depends(operator)):
         with s.db(True) as c:
             purge(c)
-            rows=c.execute('SELECT kind,ciphertext FROM vehicle_documents WHERE application_id=? AND expires>?',(id,time.time())).fetchall()
+            rows=c.execute("SELECT kind,ciphertext FROM vehicle_documents WHERE application_id=? AND expires>? AND kind IN ('licence','rc')",(id,time.time())).fetchall()
             s.fail(bool(rows),'Photos have expired or were removed. Ask the driver to submit again.',404)
             audit(c,'operator:document-view',id,'private-review')
             try: images={r['kind']:'data:image/jpeg;base64,'+base64.b64encode(cipher().decrypt(r['ciphertext'].encode())).decode() for r in rows}
@@ -134,7 +133,7 @@ def register(app,s,operator):
             s.fail(a['status']=='pending','This application has already been reviewed or withdrawn.',409)
             if data.decision=='approved':
                 s.fail(data.documents_reviewed,'Review the documents and record your verification reference first.')
-                s.fail(c.execute('SELECT count(*) FROM vehicle_documents WHERE application_id=? AND expires>?',(id,time.time())).fetchone()[0]==2,'Documents expired or were removed. Request a new application.',409)
+                s.fail(c.execute("SELECT count(*) FROM vehicle_documents WHERE application_id=? AND expires>? AND kind IN ('licence','rc')",(id,time.time())).fetchone()[0]==2,'A current driving licence and vehicle RC are required. Request a new application if either is missing.',409)
                 u=c.execute('SELECT role,approved FROM users WHERE id=?',(a['driver_id'],)).fetchone()
                 s.fail(u['role']=='driver' and u['approved'],'Approve the Driver account in Accounts first.',409)
                 c.execute('INSERT INTO vehicles VALUES(?,?,?,?) ON CONFLICT(driver_id,plate) DO UPDATE SET vehicle=excluded.vehicle,services=excluded.services',(a['driver_id'],a['plate'],a['vehicle'],a['services']))

@@ -11,7 +11,7 @@ def submission(monkeypatch):
     monkeypatch.setenv('DOCUMENT_ENCRYPTION_KEY',Fernet.generate_key().decode())
     out=io.BytesIO();Image.new('RGB',(20,20),'white').save(out,'PNG')
     photo=base64.b64encode(out.getvalue()).decode()
-    return dict(plate='mh12 zz1234',vehicle='Test car',services=['shared','cab'],licence_photo=photo,aadhaar_photo=photo,consent=True,masked_aadhaar=True)
+    return dict(plate='mh12 zz1234',vehicle='Test car',services=['shared','cab'],licence_photo=photo,rc_photo=photo,consent=True)
 
 def submit(ctx,data,user='driver'):
     r=ctx.post('/v1/vehicle-applications',headers=headers(user),json=data)
@@ -29,7 +29,7 @@ def test_private_queue_and_approval(ctx,operator,submission):
     assert ctx.get(url+'/documents',headers=headers('driver')).status_code==401
     docs=ctx.get(url+'/documents',headers=operator)
     assert docs.status_code==200 and docs.headers['cache-control']=='no-store'
-    assert set(docs.json()['images'])=={'licence','aadhaar'}
+    assert set(docs.json()['images'])=={'licence','rc'}
     with service.db() as c:
         assert submission['licence_photo'] not in c.execute('SELECT ciphertext FROM vehicle_documents WHERE application_id=?',(id,)).fetchone()[0]
         assert not c.execute('SELECT 1 FROM vehicles WHERE plate=?',('MH12ZZ1234',)).fetchone()
@@ -61,9 +61,21 @@ def test_expiry_and_validation(ctx,operator,submission,monkeypatch):
     assert ctx.post('/v1/operator/vehicle-applications/'+id+'/review',headers=operator,json=p).status_code==409
     url='/v1/vehicle-applications'
     assert ctx.post(url,headers=headers(),json=submission).status_code==403
-    for change in [dict(consent=False),dict(masked_aadhaar=False),dict(services=['bike','cab']),dict(licence_photo='a'*24)]:
+    for change in [dict(consent=False),dict(services=['bike','cab']),dict(licence_photo='a'*24)]:
         assert ctx.post(url,headers=headers('driver'),json={**submission,**change}).status_code==400
     monkeypatch.delenv('DOCUMENT_ENCRYPTION_KEY')
     assert ctx.post(url,headers=headers('driver'),json=submission).status_code==503
     assert ctx.post(url,headers=headers('driver'),content=b'x'*(6*1024*1024+1)).status_code==413
     assert ctx.post('/v1/auth/login',content=b'x'*17000).status_code==413
+
+
+def test_old_identity_photo_does_not_count_as_vehicle_rc(ctx,operator,submission):
+    id=submit(ctx,submission)
+    with service.db(True) as c:c.execute("UPDATE vehicle_documents SET kind='aadhaar' WHERE application_id=? AND kind='rc'",(id,))
+    url='/v1/operator/vehicle-applications/'+id
+    assert set(ctx.get(url+'/documents',headers=operator).json()['images'])=={'licence'}
+    p=dict(decision='approved',reference='checked-001',note='Eligibility checked',documents_reviewed=True)
+    assert ctx.post(url+'/review',headers=operator,json=p).status_code==409
+    old={**submission,'aadhaar_photo':submission['rc_photo'],'masked_aadhaar':True}
+    old.pop('rc_photo')
+    assert ctx.post('/v1/vehicle-applications',headers=headers('driver'),json=old).status_code==422

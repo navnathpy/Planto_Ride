@@ -1,0 +1,33 @@
+/* A decorative layer, never an interaction surface or a sticky content block. */
+.vision-body,.app-body{isolation:isolate;background:#f8faf4}
+.site-background{position:fixed;inset:0;z-index:0;pointer-events:none!important;overflow:hidden;contain:strict;opacity:.26;background:radial-gradient(ellipse at 82% 48%,#dce9c9 0%,#edf3e1 46%,#f9faf5 80%);mask-image:linear-gradient(90deg,transparent 0%,#000 42%,#000 100%);-webkit-mask-image:linear-gradient(90deg,transparent 0%,#000 42%,#000 100%)}
+.site-background canvas,.site-background img{position:absolute;display:block;inset:0;width:100%;height:100%;object-fit:contain;transform:translate(23vw,8vh);pointer-events:none!important}
+.site-background img{mix-blend-mode:multiply;mask-image:radial-gradient(ellipse at center,#000 20%,transparent 70%);-webkit-mask-image:radial-gradient(ellipse at center,#000 20%,transparent 70%)}
+.site-background [hidden]{display:none!important}
+.vision-body>header,.vision-body>main,.vision-body>footer{position:relative;z-index:1}
+.vision-header{background:rgba(250,251,246,.94)}
+.vision-body .journey-story{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px;padding-bottom:82px}
+.vision-body .story-step{grid-column:auto;min-height:0;padding:34px 28px;background:rgba(255,255,251,.94);border:1px solid #dce5d1;border-radius:24px;align-items:flex-start;scroll-margin-top:30px}
+.vision-body .opening-step{grid-column:1/-1;min-height:min(860px,calc(100svh - 104px));border:0;border-radius:0;background:transparent;padding:65px 0 60px;align-items:center}
+.vision-body .opening-step>div{max-width:760px}
+.vision-body .opening-step h1{font-size:clamp(57px,5.9vw,88px);letter-spacing:-4px;max-width:760px}
+.vision-body .opening-step h1 em{color:#658336}
+.vision-body .story-step:not(.opening-step) h2{font-size:clamp(27px,2.65vw,38px);letter-spacing:-1.5px;margin:18px 0}
+.vision-body .story-step:not(.opening-step) .lead{font-size:16px;line-height:1.55}
+.vision-body .story-step:not(.opening-step)>div>p:not(.lead){font-size:13px;line-height:1.85}
+.vision-body .story-detail{gap:12px;padding-top:21px;margin-top:25px}
+.vision-body .story-detail>span{width:33px;height:33px;font-size:21px}
+.vision-body .story-detail strong{font-size:12px}
+.vision-body .story-detail p{font-size:11px}
+.vision-body .story-step .quiet-link{font-size:12px}
+.vision-body .how-section,.vision-body .impact-invitation{background:rgba(237,242,227,.96)}
+.app-body>.app-layout{position:relative;z-index:1;background:transparent}
+.app-body>.app-header{position:relative;z-index:20;background:rgba(255,255,255,.98)}
+.app-body .app-main{background:transparent}
+.app-body .site-background{opacity:.18;mask-image:linear-gradient(90deg,transparent 12%,#000 50%,#000 100%);-webkit-mask-image:linear-gradient(90deg,transparent 12%,#000 50%,#000 100%)}
+.app-body .site-background canvas,.app-body .site-background img{transform:translate(26vw,12vh)}
+.app-body .panel,.app-body .ride-card,.app-body .trip-card,.app-body .operator-panel,.app-body dialog{background:#fff}
+@media(max-width:1100px){.vision-body .story-step{padding:28px 23px}.vision-body .journey-story{gap:17px}.vision-body .opening-step h1{font-size:68px;max-width:700px}.vision-body .opening-step{padding-block:55px}.site-background canvas,.site-background img{transform:translate(24vw,12vh)}}
+@media(max-width:800px){.vision-body .journey-story{grid-template-columns:1fr;gap:20px;padding-bottom:52px}.vision-body .story-step{order:initial;padding:30px;border-radius:20px;scroll-margin-top:24px}.vision-body .opening-step{grid-column:auto;padding:44px 0 36px;min-height:0;margin-bottom:15px}.vision-body .opening-step>div{max-width:650px}.vision-body .opening-step h1{font-size:62px;letter-spacing:-3px;max-width:650px}.vision-body .opening-step .lead{font-size:20px}.vision-body .story-step:not(.opening-step) h2{font-size:36px}.vision-body .story-step:not(.opening-step) .lead{font-size:18px}.vision-body .story-step:not(.opening-step)>div>p:not(.lead){font-size:14px}.vision-body .story-detail strong{font-size:13px}.vision-body .story-detail p{font-size:12px}.site-background{opacity:.17;mask-image:linear-gradient(180deg,#000 0%,#000 80%,transparent 100%);-webkit-mask-image:linear-gradient(180deg,#000 0%,#000 80%,transparent 100%)}.site-background canvas,.site-background img{transform:translate(18vw,14vh) scale(1.25);width:100%;left:0;height:100%}.app-body .site-background{opacity:.11}.app-body .site-background canvas,.app-body .site-background img{transform:translate(15vw,19vh) scale(1.25)}}
+@media(max-width:520px){.vision-body .opening-step{padding:31px 0 34px}.vision-body .opening-step h1,.vision-body .opening-step h1 em{font-size:clamp(43px,11.4vw,58px);letter-spacing:-2.6px;line-height:1.08}.vision-body .opening-step .vision-eyebrow{font-size:8px;letter-spacing:1px}.vision-body .opening-step .lead{font-size:18px}.vision-body .opening-step .intro-copy{font-size:14px;max-width:330px}.vision-body .story-step{padding:28px 23px}.vision-body .story-step:not(.opening-step) h2{font-size:34px}.site-background canvas,.site-background img{width:100%;left:0;transform:translate(19vw,14vh) scale(1.4)}.site-background{opacity:.14}.vision-body .vision-actions{gap:10px}.vision-body .opening-step .vision-actions{margin-top:24px}.app-body .site-background{opacity:.09}}
+@media(prefers-reduced-motion:reduce){.site-background{opacity:.14}.app-body .site-background{opacity:.08}}

@@ -1,9 +1,10 @@
-// Planto-Ride's decorative, progressively enhanced homepage scene.
+// Planto-Ride's decorative, progressively enhanced car scene.
 // Three.js r186 is locally vendored; no models, tracking or remote runtime assets.
 const canvas = document.querySelector('#ride-scene');
 const stage = document.querySelector('#scene-stage');
 const fallback = document.querySelector('#scene-fallback');
 const caption = document.querySelector('#scene-status');
+const backgroundMode = stage?.dataset.sceneMode === 'background';
 const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
 let controller = null;
 let loading = false;
@@ -13,7 +14,7 @@ let generation = 0;
 
 function staticView() {
   if (stage) stage.dataset.scene = 'fallback';
-  if (canvas) canvas.hidden = true;
+  if (canvas) { canvas.hidden = true; canvas.style.opacity = '0'; }
   if (fallback) { fallback.hidden = false; fallback.style.opacity = '1'; }
 }
 
@@ -37,7 +38,7 @@ async function enhance() {
 
 function buildScene(T) {
   const renderer = new T.WebGLRenderer({ canvas, alpha: true, antialias: true, powerPreference: 'low-power' });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, window.innerWidth < 700 ? 1.4 : 1.7));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, backgroundMode ? 1.15 : window.innerWidth < 700 ? 1.4 : 1.7));
   renderer.setClearColor(0x000000, 0);
   renderer.outputColorSpace = T.SRGBColorSpace;
   renderer.toneMapping = T.ACESFilmicToneMapping;
@@ -266,9 +267,19 @@ function buildScene(T) {
   let previousFrame = 0;
   let label = -1;
   let started = false;
+  let revealElapsed = 0;
   const clamp = (value, min = 0, max = 1) => Math.max(min, Math.min(max, value));
   const smooth = (value) => { const x = clamp(value); return x * x * (3 - 2 * x); };
   function updateScroll() {
+    if (backgroundMode) {
+      // The fixed backdrop follows the whole page; it never pins content or owns scrolling.
+      const scrollRange = Math.max(1, document.documentElement.scrollHeight - innerHeight);
+      const pageProgress = clamp(window.scrollY / scrollRange);
+      const activeView = document.querySelector('.view[id^="view-"]:not([hidden])');
+      const viewProgress = { 'view-ride': .1, 'view-drive': .55, 'view-trips': 1, 'view-impact': 2.5, 'view-safety': 1.5, 'view-account': 1.9 };
+      targetProgress = activeView ? clamp((viewProgress[activeView.id] ?? 0) + pageProgress * .65, 0, 3) : pageProgress * 3;
+      return;
+    }
     if (steps.length < 2) return;
     const centers = steps.map(step => { const rect = step.getBoundingClientRect(); return rect.top + rect.height * .48; });
     const line = innerHeight * .5;
@@ -288,11 +299,12 @@ function buildScene(T) {
   }
   function renderFrame(time = 0) {
     if (disposed) return;
-    // Cap expensive rendering at 30 fps; scroll is natively handled by the browser.
-    if (inView && time - previousFrame < 31) return;
-    const delta = previousFrame ? Math.min((time - previousFrame) / 1000, .08) : .033;
+    // Keep the ambient backdrop inexpensive, especially alongside booking controls.
+    if (inView && time - previousFrame < (backgroundMode ? 56 : 31)) return;
+    const delta = previousFrame ? Math.min((time - previousFrame) / 1000, .1) : .033;
     previousFrame = time;
-    progress += (targetProgress - progress) * (1 - Math.exp(-delta * 6));
+    progress += (targetProgress - progress) * (1 - Math.exp(-delta * (backgroundMode ? 1.6 : 6)));
+    if (inView) revealElapsed += delta;
     const greenery = smooth((progress - .45) / 2.4);
     const trafficFade = 1 - smooth(progress / .95);
     trafficMaterial.opacity = .16 * trafficFade; ghostMaterial.opacity = .18 * trafficFade;
@@ -307,18 +319,20 @@ function buildScene(T) {
     const carbonAmount = smooth((progress - 1.35) * 2) * (1 - smooth((progress - 2.6) * 2));
     carbon.visible = carbonAmount > .01;
     trails.forEach((trail, i) => { trail.material.opacity = carbonAmount * (.42 - i * .07); trail.position.x = Math.sin(time * .0007 + i) * .08; });
-    const angle = .70 - smooth(progress / 3) * .22;
-    const distance = camera.aspect < .88 ? 12.7 : camera.aspect < 1.25 ? 11.6 : 10.4;
-    camera.position.set(Math.sin(angle) * distance, 3.8 + greenery * .85, Math.cos(angle) * distance);
+    const drift = backgroundMode && inView ? Math.sin(time * .000075) : 0;
+    const angle = .70 - smooth(progress / 3) * (backgroundMode ? .12 : .22) + drift * .015;
+    const distance = backgroundMode ? (camera.aspect < .88 ? 17.3 : camera.aspect < 1.25 ? 14.7 : 12.9) : camera.aspect < .88 ? 12.7 : camera.aspect < 1.25 ? 11.6 : 10.4;
+    camera.position.set(Math.sin(angle) * distance, 3.8 + greenery * (backgroundMode ? .35 : .85), Math.cos(angle) * distance);
     camera.lookAt(0, .67, 0);
-    car.rotation.y = -.10 + Math.sin(progress * 1.6) * .065;
+    car.rotation.y = -.10 + Math.sin(progress * 1.6) * (backgroundMode ? .035 : .065) + drift * .008;
     car.position.y = inView ? Math.sin(time * .0005) * .008 : 0;
     wheels.forEach(wheel => wheel.rotation.z = -progress * .9);
     ring.material.opacity = .10 + greenery * .13;
     const active = Math.round(progress);
     if (active !== label) { label = active; if (caption) caption.textContent = labels[active]; stage.dataset.story = String(active); }
     renderer.render(scene, camera);
-    const reveal = smooth((progress - .12) / .38);
+    // Background enhancement crossfades gently after loading, even on a short app tab.
+    const reveal = backgroundMode ? smooth(revealElapsed / 1.4) : smooth((progress - .12) / .38);
     canvas.hidden = reveal <= 0; canvas.style.opacity = String(reveal);
     if (fallback) { fallback.hidden = reveal >= 1; fallback.style.opacity = String(1 - reveal); }
     if (!started) { started = true; stage.dataset.scene = 'ready'; }
@@ -330,6 +344,8 @@ function buildScene(T) {
     if (value) { previousFrame = 0; updateScroll(); renderFrame(performance.now()); }
   }
   const resizer = new ResizeObserver(resize); resizer.observe(stage);
+  const viewObserver = backgroundMode ? new MutationObserver(updateScroll) : null;
+  if (viewObserver) document.querySelectorAll('.view[id^="view-"]').forEach(view => viewObserver.observe(view, { attributes: true, attributeFilter: ['hidden'] }));
   window.addEventListener('scroll', updateScroll, { passive: true });
   function contextLost(event) { event.preventDefault(); stopped = true; stopScene(); staticView(); }
   canvas.addEventListener('webglcontextlost', contextLost);
@@ -337,7 +353,7 @@ function buildScene(T) {
   return {
     setVisible,
     dispose() {
-      disposed = true; renderer.setAnimationLoop(null); resizer.disconnect();
+      disposed = true; renderer.setAnimationLoop(null); resizer.disconnect(); viewObserver?.disconnect();
       window.removeEventListener('scroll', updateScroll); canvas.removeEventListener('webglcontextlost', contextLost);
       logoImage.onload = null; logoImage.src = '';
       geometries.forEach(geometry => geometry.dispose()); materials.forEach(material => material.dispose()); textures.forEach(texture => texture.dispose());

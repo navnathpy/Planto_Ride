@@ -92,6 +92,8 @@ async def guard(request:Request,call_next):
         response=await call_next(request)
         response.headers['X-Content-Type-Options']='nosniff'
         response.headers['Referrer-Policy']='no-referrer'
+        if request.url.path=='/' or request.url.path.endswith('.html'):
+            response.headers['Cache-Control']='no-cache'
         if request.url.path in ('/health','/config.js'):
             response.headers['Cache-Control']='no-store'
         return response

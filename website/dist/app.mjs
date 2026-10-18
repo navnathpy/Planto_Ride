@@ -1,6 +1,6 @@
-import {mountVehicleRegistration} from './vehicle-registration.mjs?v=vehicle-rc-2';
+import {mountVehicleRegistration} from './vehicle-registration.mjs?v=redesign-3';
 let vehicleRegistration=null;
-import {mountOperator} from './operator.mjs?v=vehicle-rc-2';
+import {mountOperator} from './operator.mjs?v=redesign-3';
 import {createCompanion} from './companion.mjs';
 import {createApi,SERVICES,totalFare,cashfreeCheckout} from './client.mjs';
 import {updateMap} from './maps.mjs';
